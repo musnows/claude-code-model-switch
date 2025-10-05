@@ -1,6 +1,6 @@
 {
   "name": "claude-code-model-switch",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A CLI tool to switch Claude Code models",
   "main": "index.js",
   "bin": {
@@ -9,7 +9,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["claude", "code", "model", "switch"],
+  "keywords": [
+    "claude",
+    "code",
+    "model",
+    "switch"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
