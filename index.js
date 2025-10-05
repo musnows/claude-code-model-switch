@@ -108,9 +108,18 @@ function applyModelConfig(modelConfig) {
   }
 
   // 处理默认值逻辑
-  if (!settings.env.ANTHROPIC_MODEL) {
-    console.error('错误：ANTHROPIC_MODEL 是必填的');
-    process.exit(1);
+  // 检查必填的环境变量
+  const requiredEnvVars = [
+    'ANTHROPIC_MODEL',
+    'ANTHROPIC_AUTH_TOKEN',
+    'ANTHROPIC_BASE_URL'
+  ];
+
+  for (const envVar of requiredEnvVars) {
+    if (!settings.env[envVar]) {
+      console.error(`错误：${envVar} 是必填的`);
+      process.exit(1);
+    }
   }
 
   // 如果其他模型字段未设置，使用ANTHROPIC_MODEL的值
