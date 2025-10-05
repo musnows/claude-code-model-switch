@@ -76,7 +76,15 @@ function getModelConfig(modelName) {
     process.exit(1);
   }
 
-  return config.models[modelName];
+  const modelConfig = config.models[modelName];
+
+  // 检查模型配置是否为空
+  if (Object.keys(modelConfig).length === 0) {
+    console.error(`错误：模型 "${modelName}" 的配置为空`);
+    process.exit(1);
+  }
+
+  return modelConfig;
 }
 
 // 应用模型配置
@@ -167,7 +175,9 @@ function listModels() {
 // 检查是否是有效的模型名称
 function isValidModel(modelName) {
   const config = loadModelConfig();
-  return config.models && config.models[modelName];
+  return config.models &&
+         config.models[modelName] &&
+         Object.keys(config.models[modelName]).length > 0;
 }
 
 // 主程序
@@ -183,9 +193,19 @@ program
         const modelConfig = getModelConfig(model);
         applyModelConfig(modelConfig);
       } else {
-        console.error(`错误：找不到模型 "${model}"`);
         const config = loadModelConfig();
-        console.log('可用的模型：', Object.keys(config.models || {}).join(', ') || '无');
+        const modelConfig = config.models && config.models[model];
+
+        if (modelConfig && Object.keys(modelConfig).length === 0) {
+          console.error(`错误：模型 "${model}" 的配置为空`);
+        } else {
+          console.error(`错误：找不到模型 "${model}"`);
+        }
+
+        const validModels = Object.keys(config.models || {}).filter(name =>
+          config.models[name] && Object.keys(config.models[name]).length > 0
+        );
+        console.log('可用的模型：', validModels.join(', ') || '无');
         process.exit(1);
       }
     } else {
