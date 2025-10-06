@@ -73,6 +73,7 @@ function getModelConfig(modelName) {
   if (!config.models || !config.models[modelName]) {
     console.error(`Error: Model "${modelName}" not found`);
     console.log('Available models:', Object.keys(config.models || {}).join(', ') || 'None');
+    console.log('Run "ccms --help" to see available commands');
     process.exit(1);
   }
 
@@ -81,6 +82,7 @@ function getModelConfig(modelName) {
   // Check if model configuration is empty
   if (Object.keys(modelConfig).length === 0) {
     console.error(`Error: Model "${modelName}" configuration is empty`);
+    console.log('Run "ccms --help" to see available commands');
     process.exit(1);
   }
 
@@ -184,7 +186,7 @@ function isValidModel(modelName) {
 program
   .name('ccms')
   .description('Claude Code Model Switch - Switch Claude Code models')
-  .version('1.0.0')
+  .version('1.0.1')
   .argument('[model]', 'Model name to switch to')
   .action((model) => {
     if (model) {
@@ -206,6 +208,7 @@ program
           config.models[name] && Object.keys(config.models[name]).length > 0
         );
         console.log('Available models:', validModels.join(', ') || 'None');
+        console.log('Run "ccms --help" to see available commands');
         process.exit(1);
       }
     } else {
