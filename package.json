@@ -1,6 +1,6 @@
 {
   "name": "claude-code-model-switch",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A CLI tool to switch Claude Code models",
   "main": "index.js",
   "bin": {
