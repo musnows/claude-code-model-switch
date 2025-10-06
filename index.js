@@ -98,6 +98,22 @@ function applyModelConfig(modelConfig) {
     settings.env = {};
   }
 
+  // First, set default values for unset model fields in the config itself
+  // If ANTHROPIC_MODEL is set but other model fields are not, use ANTHROPIC_MODEL value
+  if (modelConfig.ANTHROPIC_MODEL) {
+    const derivedModelFields = [
+      'ANTHROPIC_SMALL_FAST_MODEL',
+      'ANTHROPIC_DEFAULT_SONNET_MODEL',
+      'ANTHROPIC_DEFAULT_OPUS_MODEL'
+    ];
+
+    for (const field of derivedModelFields) {
+      if (!modelConfig[field]) {
+        modelConfig[field] = modelConfig.ANTHROPIC_MODEL;
+      }
+    }
+  }
+
   // Only update model-related environment variables
   const modelEnvVars = [
     'ANTHROPIC_AUTH_TOKEN',
@@ -132,19 +148,7 @@ function applyModelConfig(modelConfig) {
     }
   }
 
-  // If other model fields are not set, use ANTHROPIC_MODEL value
-  const derivedModelFields = [
-    'ANTHROPIC_SMALL_FAST_MODEL',
-    'ANTHROPIC_DEFAULT_SONNET_MODEL',
-    'ANTHROPIC_DEFAULT_OPUS_MODEL'
-  ];
-
-  for (const field of derivedModelFields) {
-    if (!settings.env[field]) {
-      settings.env[field] = settings.env.ANTHROPIC_MODEL;
-    }
-  }
-
+  
   // Handle special environment variable defaults
   if (!settings.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS) {
     settings.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = DEFAULT_MAX_OUTPUT_TOKENS;
