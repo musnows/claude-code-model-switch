@@ -229,12 +229,60 @@ program
     listModels();
   });
 
+// Unset all model-related configuration
+function unsetModelConfig() {
+  const settings = loadClaudeSettings();
+
+  // Ensure env object exists
+  if (!settings.env) {
+    settings.env = {};
+  }
+
+  // Model-related environment variables to remove (excluding some settings)
+  const modelEnvVars = [
+    'ANTHROPIC_AUTH_TOKEN',
+    'ANTHROPIC_BASE_URL',
+    'ANTHROPIC_MODEL',
+    'ANTHROPIC_SMALL_FAST_MODEL',
+    'ANTHROPIC_DEFAULT_SONNET_MODEL',
+    'ANTHROPIC_DEFAULT_OPUS_MODEL'
+  ];
+
+  let removedCount = 0;
+  const removedVars = [];
+
+  // Remove only existing model-related environment variables
+  for (const key of modelEnvVars) {
+    if (settings.env.hasOwnProperty(key)) {
+      delete settings.env[key];
+      removedCount++;
+      removedVars.push(key);
+    }
+  }
+
+  saveClaudeSettings(settings);
+
+  if (removedCount > 0) {
+    console.log(`Removed ${removedCount} model-related configurations: ${removedVars.join(', ')}`);
+    console.log('Restored to use claude official models');
+  } else {
+    console.log('No model-related configurations found to remove');
+  }
+}
+
 program
   .command('config-path')
   .description('Display configuration file paths')
   .action(() => {
     console.log('Model configuration file path:', MODEL_CONFIG_PATH);
-    console.log('Claude settings file path:', CLAUDE_SETTINGS_PATH);
+    console.log('Claude Code settings file path:', CLAUDE_SETTINGS_PATH);
+  });
+
+program
+  .command('unset')
+  .description('Remove all model-related configuration and use official models')
+  .action(() => {
+    unsetModelConfig();
   });
 
 program.parse();

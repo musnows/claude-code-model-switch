@@ -9,6 +9,7 @@
 - 自动处理模型相关环境变量
 - 命令行界面，操作简单
 - 安全的配置管理，只修改模型相关设置
+- 使用 unset 命令重置为官方模型
 
 ## 📦 安装
 
@@ -32,6 +33,9 @@ ccms list
 
 # 查看配置文件路径
 ccms config-path
+
+# 清除所有模型相关配置，恢复使用官方模型
+ccms unset
 ```
 
 ### 配置模型
@@ -88,6 +92,7 @@ ccms config-path
    - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 默认为 `1`
    - 未设置的模型字段会自动使用 `ANTHROPIC_MODEL` 的值
 3. **配置文件**：首次运行时会自动创建空的配置文件 `{"models": {}}`
+4. **Unset 命令**：`ccms unset` 命令只删除模型特定的变量，同时保留 `CLAUDE_CODE_MAX_OUTPUT_TOKENS` 和 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
 
 ## 📁 文件位置
 

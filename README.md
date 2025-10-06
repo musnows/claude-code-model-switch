@@ -9,6 +9,7 @@ A CLI tool for switching between different AI models in Claude Code.
 - Automatic handling of model-related environment variables
 - Simple command-line interface
 - Secure configuration management - only modifies model-related settings
+- Reset to official models with unset command
 
 ## 📦 Installation
 
@@ -32,6 +33,9 @@ ccms list
 
 # Show configuration file paths
 ccms config-path
+
+# Remove all model-related configuration and use official models
+ccms unset
 ```
 
 ### Model Configuration
@@ -88,6 +92,7 @@ Edit the configuration file `~/.claude-code-model-switch/settings.json`:
    - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` defaults to `1`
    - Unset model fields automatically use the value of `ANTHROPIC_MODEL`
 3. **Configuration File**: Empty configuration file `{"models": {}}` is automatically created on first run
+4. **Unset Command**: The `ccms unset` command removes only model-specific variables while preserving `CLAUDE_CODE_MAX_OUTPUT_TOKENS` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
 
 ## 📁 File Locations
 
