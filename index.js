@@ -190,7 +190,7 @@ function isValidModel(modelName) {
 program
   .name('ccms')
   .description('Claude Code Model Switch - Switch Claude Code models')
-  .version('1.0.2')
+  .version('1.0.3')
   .argument('[model]', 'Model name to switch to')
   .action((model) => {
     if (model) {
