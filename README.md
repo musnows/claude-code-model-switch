@@ -7,6 +7,7 @@ A CLI tool for switching between different AI models in Claude Code.
 - Launch Claude Code with a preconfigured model in one command (yolo mode)
 - Support for multiple pre-configured model environments
 - `start` injects model config as env vars; `config` persists to settings.json
+- `shared` env vars apply to all models (model-specific values override shared)
 - Automatic handling of model-related environment variables and defaults
 - Simple command-line interface
 - `unset` removes model-related entries from settings.json
@@ -39,6 +40,11 @@ ccms config-path
 
 # Remove model-related configuration from settings.json
 ccms unset
+
+# Manage shared environment variables for all models
+ccms shared list
+ccms shared set API_TIMEOUT_MS 600000
+ccms shared unset API_TIMEOUT_MS
 ```
 
 ### Model Configuration
@@ -47,6 +53,10 @@ Edit the configuration file `~/.claude-code-model-switch/settings.json`:
 
 ```json
 {
+  "shared": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "API_TIMEOUT_MS": "600000"
+  },
   "models": {
     "deepseek-chat": {
       "ANTHROPIC_AUTH_TOKEN": "sk-your-token-here",
@@ -91,11 +101,12 @@ Edit the configuration file `~/.claude-code-model-switch/settings.json`:
 
 1. **start command**: `ccms start <model>` injects model config as environment variables and launches `claude` with `--dangerously-skip-permissions` (yolo mode)
 2. **config command**: `ccms config <model>` writes model config to `~/.claude/settings.json` for persistent configuration
-3. **Default Values**:
+3. **shared env vars**: variables in `shared` apply to every model; model-specific values override shared ones
+4. **Default Values**:
    - `CLAUDE_CODE_MAX_OUTPUT_TOKENS` defaults to `8192`
    - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` defaults to `1`
    - Unset model fields automatically use the value of `ANTHROPIC_MODEL`
-4. **Configuration File**: Empty configuration file `{"models": {}}` is automatically created on first run
+4. **Configuration File**: Empty configuration file `{"shared": {}, "models": {}}` is automatically created on first run
 5. **Unset Command**: `ccms unset` removes only model-specific variables from `settings.json` and restores official models
 
 ## 📁 File Locations

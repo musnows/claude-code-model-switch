@@ -61,7 +61,7 @@ function loadModelConfig() {
   ensureConfigDir();
 
   if (!fs.existsSync(MODEL_CONFIG_PATH)) {
-    const defaultConfig = { models: {} };
+    const defaultConfig = { shared: {}, models: {} };
     fs.writeFileSync(MODEL_CONFIG_PATH, JSON.stringify(defaultConfig, null, 2));
     return defaultConfig;
   }
@@ -118,9 +118,25 @@ function reportUnknownModel(model) {
   process.exit(1);
 }
 
-function getModelConfig(modelName) {
-  const config = loadModelConfig();
+function saveModelConfig(config) {
+  ensureConfigDir();
+  try {
+    fs.writeFileSync(MODEL_CONFIG_PATH, JSON.stringify(config, null, 2));
+  } catch (error) {
+    console.error('Error: Failed to save model configuration file');
+    process.exit(1);
+  }
+}
 
+function getSharedEnv(config = loadModelConfig()) {
+  const shared = config.shared;
+  if (!shared || typeof shared !== 'object' || Array.isArray(shared)) {
+    return {};
+  }
+  return shared;
+}
+
+function getRawModelConfig(modelName, config = loadModelConfig()) {
   if (!config.models || !config.models[modelName]) {
     reportUnknownModel(modelName);
   }
@@ -134,6 +150,14 @@ function getModelConfig(modelName) {
   }
 
   return modelConfig;
+}
+
+function mergeModelConfig(modelName) {
+  const config = loadModelConfig();
+  const shared = getSharedEnv(config);
+  const modelConfig = getRawModelConfig(modelName, config);
+
+  return { ...shared, ...modelConfig };
 }
 
 function normalizeModelConfig(modelConfig) {
@@ -154,9 +178,9 @@ function buildModelEnv(modelConfig) {
   const normalized = normalizeModelConfig(modelConfig);
   const env = { ...process.env };
 
-  for (const key of MODEL_ENV_VARS) {
-    if (normalized[key] !== undefined) {
-      env[key] = String(normalized[key]);
+  for (const [key, value] of Object.entries(normalized)) {
+    if (value !== undefined && value !== null) {
+      env[key] = String(value);
     }
   }
 
@@ -234,7 +258,7 @@ function launchClaude(env, claudeArgs = []) {
 }
 
 function startClaudeWithModel(modelName) {
-  const modelConfig = getModelConfig(modelName);
+  const modelConfig = mergeModelConfig(modelName);
   const env = buildModelEnv(modelConfig);
   const claudeArgs = buildStartArgs(getStartArgsFromArgv());
 
@@ -250,9 +274,9 @@ function applyModelConfig(modelConfig) {
     settings.env = {};
   }
 
-  for (const key of MODEL_ENV_VARS) {
-    if (normalized[key] !== undefined) {
-      settings.env[key] = normalized[key];
+  for (const [key, value] of Object.entries(normalized)) {
+    if (value !== undefined && value !== null) {
+      settings.env[key] = String(value);
     }
   }
 
@@ -276,8 +300,49 @@ function applyModelConfig(modelConfig) {
 }
 
 function configModel(modelName) {
-  const modelConfig = getModelConfig(modelName);
+  const modelConfig = mergeModelConfig(modelName);
   applyModelConfig(modelConfig);
+}
+
+function listSharedEnv() {
+  const shared = getSharedEnv();
+  const keys = Object.keys(shared);
+
+  if (keys.length === 0) {
+    console.log('No shared environment variables configured');
+    return;
+  }
+
+  console.log('Shared environment variables:');
+  keys.forEach((key) => {
+    console.log(`  ${key}=${shared[key]}`);
+  });
+}
+
+function setSharedEnv(key, value) {
+  const config = loadModelConfig();
+
+  if (!config.shared || typeof config.shared !== 'object' || Array.isArray(config.shared)) {
+    config.shared = {};
+  }
+
+  config.shared[key] = value;
+  saveModelConfig(config);
+  console.log(`[ccms] shared env set: ${key}=${value}`);
+}
+
+function unsetSharedEnv(key) {
+  const config = loadModelConfig();
+  const shared = getSharedEnv(config);
+
+  if (!Object.prototype.hasOwnProperty.call(shared, key)) {
+    console.log(`No shared environment variable found: ${key}`);
+    return;
+  }
+
+  delete config.shared[key];
+  saveModelConfig(config);
+  console.log(`[ccms] shared env removed: ${key}`);
 }
 
 function unsetModelConfig() {
@@ -325,7 +390,7 @@ function listModels() {
 program
   .name('ccms')
   .description('Claude Code Model Switch - Manage and launch Claude Code with configured models')
-  .version('2.1.0');
+  .version('2.2.0');
 
 program
   .command('start <model> [claude-args...]')
@@ -363,6 +428,41 @@ program
   .description('Remove model-related configuration from ~/.claude/settings.json')
   .action(() => {
     unsetModelConfig();
+  });
+
+program
+  .command('shared')
+  .description('Manage shared environment variables for all models')
+  .argument('[action]', 'list, set, or unset')
+  .argument('[key]', 'Environment variable name')
+  .argument('[value]', 'Environment variable value')
+  .action((action, key, value) => {
+    if (!action || action === 'list') {
+      listSharedEnv();
+      return;
+    }
+
+    if (action === 'set') {
+      if (!key || value === undefined) {
+        console.error('Usage: ccms shared set <key> <value>');
+        process.exit(1);
+      }
+      setSharedEnv(key, value);
+      return;
+    }
+
+    if (action === 'unset') {
+      if (!key) {
+        console.error('Usage: ccms shared unset <key>');
+        process.exit(1);
+      }
+      unsetSharedEnv(key);
+      return;
+    }
+
+    console.error(`Unknown shared action: ${action}`);
+    console.log('Usage: ccms shared [list|set <key> <value>|unset <key>]');
+    process.exit(1);
   });
 
 program.parse();

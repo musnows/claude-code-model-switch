@@ -1,4 +1,8 @@
 {
+  "shared": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "API_TIMEOUT_MS": "600000"
+  },
   "models": {
     "deepseek-chat": {
       "ANTHROPIC_AUTH_TOKEN": "sk-caf695360e7f4b018bb1b308cbf992eb",
@@ -7,8 +11,7 @@
       "ANTHROPIC_SMALL_FAST_MODEL": "deepseek-chat",
       "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-chat",
       "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-chat",
-      "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "8192",
-      "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+      "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "8192"
     },
     "claude-3-5-sonnet": {
       "ANTHROPIC_AUTH_TOKEN": "your-anthropic-token-here",

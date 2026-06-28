@@ -7,6 +7,7 @@
 - 一条命令启动 Claude Code 并加载指定模型配置（yolo 模式）
 - 支持多个预配置模型环境
 - `start` 将模型配置注入环境变量，`config` 可持久化写入 settings.json
+- 支持 `shared` 公共环境变量，所有模型自动继承（模型配置可覆盖）
 - 自动处理模型相关环境变量及默认值
 - 命令行界面，操作简单
 - `unset` 可清除 settings.json 中的模型相关配置
@@ -39,6 +40,11 @@ ccms config-path
 
 # 清除 settings.json 中的模型相关配置，恢复使用官方模型
 ccms unset
+
+# 管理所有模型共享的环境变量
+ccms shared list
+ccms shared set API_TIMEOUT_MS 600000
+ccms shared unset API_TIMEOUT_MS
 ```
 
 ### 配置模型
@@ -47,6 +53,10 @@ ccms unset
 
 ```json
 {
+  "shared": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "API_TIMEOUT_MS": "600000"
+  },
   "models": {
     "deepseek-chat": {
       "ANTHROPIC_AUTH_TOKEN": "sk-your-token-here",
@@ -91,11 +101,12 @@ ccms unset
 
 1. **start 命令**：`ccms start <model>` 将模型配置注入环境变量并启动 `claude`，默认附带 `--dangerously-skip-permissions`（yolo 模式）
 2. **config 命令**：`ccms config <model>` 将模型配置写入 `~/.claude/settings.json`，适合需要持久化配置的场景
-3. **默认值处理**：
+3. **shared 公共变量**：`shared` 中的环境变量会应用到所有模型；单个模型里同名变量会覆盖 shared
+4. **默认值处理**：
    - `CLAUDE_CODE_MAX_OUTPUT_TOKENS` 默认为 `8192`
    - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 默认为 `1`
    - 未设置的模型字段会自动使用 `ANTHROPIC_MODEL` 的值
-4. **配置文件**：首次运行时会自动创建空的配置文件 `{"models": {}}`
+4. **配置文件**：首次运行时会自动创建空的配置文件 `{"shared": {}, "models": {}}`
 5. **Unset 命令**：`ccms unset` 只删除 `settings.json` 中的模型相关变量，恢复使用官方模型
 
 ## 📁 文件位置
