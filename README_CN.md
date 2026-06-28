@@ -4,12 +4,12 @@
 
 ## 🚀 功能特性
 
-- 快速切换 Claude Code 使用的 AI 模型
+- 一条命令启动 Claude Code 并加载指定模型配置（yolo 模式）
 - 支持多个预配置模型环境
-- 自动处理模型相关环境变量
+- `start` 将模型配置注入环境变量，`config` 可持久化写入 settings.json
+- 自动处理模型相关环境变量及默认值
 - 命令行界面，操作简单
-- 安全的配置管理，只修改模型相关设置
-- 使用 unset 命令重置为官方模型
+- `unset` 可清除 settings.json 中的模型相关配置
 
 ## 📦 安装
 
@@ -22,11 +22,14 @@ npm install -g claude-code-model-switch
 ### 基本命令
 
 ```bash
-# 切换到指定模型
-ccms deepseek-chat
+# 用指定模型启动 Claude Code（自动启用 yolo 模式）
+ccms start deepseek-chat
 
-# 或者使用 switch 子命令
-ccms switch deepseek-chat
+# 将额外参数直接传给 claude
+ccms start deepseek-chat -p "hello"
+
+# 把模型配置写入 ~/.claude/settings.json
+ccms config deepseek-chat
 
 # 列出所有可用模型
 ccms list
@@ -34,7 +37,7 @@ ccms list
 # 查看配置文件路径
 ccms config-path
 
-# 清除所有模型相关配置，恢复使用官方模型
+# 清除 settings.json 中的模型相关配置，恢复使用官方模型
 ccms unset
 ```
 
@@ -86,18 +89,19 @@ ccms unset
 
 ### 特殊规则
 
-1. **安全配置**：工具只会修改与模型相关的环境变量，不会触及配置文件中的其他字段
-2. **默认值处理**：
+1. **start 命令**：`ccms start <model>` 将模型配置注入环境变量并启动 `claude`，默认附带 `--dangerously-skip-permissions`（yolo 模式）
+2. **config 命令**：`ccms config <model>` 将模型配置写入 `~/.claude/settings.json`，适合需要持久化配置的场景
+3. **默认值处理**：
    - `CLAUDE_CODE_MAX_OUTPUT_TOKENS` 默认为 `8192`
    - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 默认为 `1`
    - 未设置的模型字段会自动使用 `ANTHROPIC_MODEL` 的值
-3. **配置文件**：首次运行时会自动创建空的配置文件 `{"models": {}}`
-4. **Unset 命令**：`ccms unset` 命令只删除模型特定的变量，同时保留 `CLAUDE_CODE_MAX_OUTPUT_TOKENS` 和 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+4. **配置文件**：首次运行时会自动创建空的配置文件 `{"models": {}}`
+5. **Unset 命令**：`ccms unset` 只删除 `settings.json` 中的模型相关变量，恢复使用官方模型
 
 ## 📁 文件位置
 
-- Claude 设置文件：`~/.claude/settings.json`
 - 模型配置文件：`~/.claude-code-model-switch/settings.json`
+- Claude Code 设置文件（`config` / `unset` 使用）：`~/.claude/settings.json`
 
 ## 🔧 开发
 

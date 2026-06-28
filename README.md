@@ -4,12 +4,12 @@ A CLI tool for switching between different AI models in Claude Code.
 
 ## 🚀 Features
 
-- Quickly switch AI models used by Claude Code
+- Launch Claude Code with a preconfigured model in one command (yolo mode)
 - Support for multiple pre-configured model environments
-- Automatic handling of model-related environment variables
+- `start` injects model config as env vars; `config` persists to settings.json
+- Automatic handling of model-related environment variables and defaults
 - Simple command-line interface
-- Secure configuration management - only modifies model-related settings
-- Reset to official models with unset command
+- `unset` removes model-related entries from settings.json
 
 ## 📦 Installation
 
@@ -22,11 +22,14 @@ npm install -g claude-code-model-switch
 ### Basic Commands
 
 ```bash
-# Switch to specified model
-ccms deepseek-chat
+# Launch Claude Code with the specified model (yolo mode enabled)
+ccms start deepseek-chat
 
-# Or use switch subcommand
-ccms switch deepseek-chat
+# Pass extra arguments directly to claude
+ccms start deepseek-chat -p "hello"
+
+# Write model configuration to ~/.claude/settings.json
+ccms config deepseek-chat
 
 # List all available models
 ccms list
@@ -34,7 +37,7 @@ ccms list
 # Show configuration file paths
 ccms config-path
 
-# Remove all model-related configuration and use official models
+# Remove model-related configuration from settings.json
 ccms unset
 ```
 
@@ -86,18 +89,19 @@ Edit the configuration file `~/.claude-code-model-switch/settings.json`:
 
 ### Special Rules
 
-1. **Secure Configuration**: The tool only modifies model-related environment variables and won't touch other fields in the configuration file
-2. **Default Values**:
+1. **start command**: `ccms start <model>` injects model config as environment variables and launches `claude` with `--dangerously-skip-permissions` (yolo mode)
+2. **config command**: `ccms config <model>` writes model config to `~/.claude/settings.json` for persistent configuration
+3. **Default Values**:
    - `CLAUDE_CODE_MAX_OUTPUT_TOKENS` defaults to `8192`
    - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` defaults to `1`
    - Unset model fields automatically use the value of `ANTHROPIC_MODEL`
-3. **Configuration File**: Empty configuration file `{"models": {}}` is automatically created on first run
-4. **Unset Command**: The `ccms unset` command removes only model-specific variables while preserving `CLAUDE_CODE_MAX_OUTPUT_TOKENS` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`
+4. **Configuration File**: Empty configuration file `{"models": {}}` is automatically created on first run
+5. **Unset Command**: `ccms unset` removes only model-specific variables from `settings.json` and restores official models
 
 ## 📁 File Locations
 
-- Claude settings file: `~/.claude/settings.json`
 - Model configuration file: `~/.claude-code-model-switch/settings.json`
+- Claude Code settings file (used by `config` / `unset`): `~/.claude/settings.json`
 
 ## 🔧 Development
 

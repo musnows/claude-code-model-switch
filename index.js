@@ -2,17 +2,54 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 const { program } = require('commander');
 
-// Configuration file paths
 const CLAUDE_SETTINGS_PATH = path.join(process.env.HOME, '.claude', 'settings.json');
 const MODEL_CONFIG_PATH = path.join(process.env.HOME, '.claude-code-model-switch', 'settings.json');
+const CLAUDE_BIN = process.env.CLAUDE_BIN || 'claude';
+const YOLO_ARGS = ['--dangerously-skip-permissions'];
 
-// Default values
 const DEFAULT_MAX_OUTPUT_TOKENS = '8192';
 const DEFAULT_DISABLE_NONESSENTIAL_TRAFFIC = '1';
 
-// Ensure configuration directory exists
+const MODEL_ENV_VARS = [
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_BASE_URL',
+  'ANTHROPIC_MODEL',
+  'ANTHROPIC_SMALL_FAST_MODEL',
+  'ANTHROPIC_DEFAULT_SONNET_MODEL',
+  'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+  'CLAUDE_CODE_MAX_OUTPUT_TOKENS',
+  'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
+  'CLAUDE_CODE_AUTO_COMPACT_WINDOW',
+  'API_TIMEOUT_MS'
+];
+
+const UNSET_ENV_VARS = [
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_BASE_URL',
+  'ANTHROPIC_MODEL',
+  'ANTHROPIC_SMALL_FAST_MODEL',
+  'ANTHROPIC_DEFAULT_SONNET_MODEL',
+  'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL'
+];
+
+const DERIVED_MODEL_FIELDS = [
+  'ANTHROPIC_SMALL_FAST_MODEL',
+  'ANTHROPIC_DEFAULT_SONNET_MODEL',
+  'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL'
+];
+
+const REQUIRED_ENV_VARS = [
+  'ANTHROPIC_MODEL',
+  'ANTHROPIC_AUTH_TOKEN',
+  'ANTHROPIC_BASE_URL'
+];
+
 function ensureConfigDir() {
   const configDir = path.dirname(MODEL_CONFIG_PATH);
   if (!fs.existsSync(configDir)) {
@@ -20,27 +57,23 @@ function ensureConfigDir() {
   }
 }
 
-// Load model configuration
 function loadModelConfig() {
   ensureConfigDir();
 
   if (!fs.existsSync(MODEL_CONFIG_PATH)) {
-    // Create empty default configuration file
     const defaultConfig = { models: {} };
     fs.writeFileSync(MODEL_CONFIG_PATH, JSON.stringify(defaultConfig, null, 2));
     return defaultConfig;
   }
 
   try {
-    const configContent = fs.readFileSync(MODEL_CONFIG_PATH, 'utf8');
-    return JSON.parse(configContent);
+    return JSON.parse(fs.readFileSync(MODEL_CONFIG_PATH, 'utf8'));
   } catch (error) {
     console.error('Error: Failed to parse model configuration file');
     process.exit(1);
   }
 }
 
-// Load Claude settings
 function loadClaudeSettings() {
   if (!fs.existsSync(CLAUDE_SETTINGS_PATH)) {
     console.error('Error: Claude settings file not found');
@@ -48,15 +81,13 @@ function loadClaudeSettings() {
   }
 
   try {
-    const settingsContent = fs.readFileSync(CLAUDE_SETTINGS_PATH, 'utf8');
-    return JSON.parse(settingsContent);
+    return JSON.parse(fs.readFileSync(CLAUDE_SETTINGS_PATH, 'utf8'));
   } catch (error) {
     console.error('Error: Failed to parse Claude settings file');
     process.exit(1);
   }
 }
 
-// Save Claude settings
 function saveClaudeSettings(settings) {
   try {
     fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2));
@@ -66,20 +97,36 @@ function saveClaudeSettings(settings) {
   }
 }
 
-// Get model configuration
+function getValidModels(config = loadModelConfig()) {
+  return Object.keys(config.models || {}).filter(
+    (name) => config.models[name] && Object.keys(config.models[name]).length > 0
+  );
+}
+
+function reportUnknownModel(model) {
+  const config = loadModelConfig();
+  const modelConfig = config.models && config.models[model];
+
+  if (modelConfig && Object.keys(modelConfig).length === 0) {
+    console.error(`Error: Model "${model}" configuration is empty`);
+  } else {
+    console.error(`Error: Model "${model}" not found`);
+  }
+
+  console.log('Available models:', getValidModels(config).join(', ') || 'None');
+  console.log('Run "ccms --help" to see available commands');
+  process.exit(1);
+}
+
 function getModelConfig(modelName) {
   const config = loadModelConfig();
 
   if (!config.models || !config.models[modelName]) {
-    console.error(`Error: Model "${modelName}" not found`);
-    console.log('Available models:', Object.keys(config.models || {}).join(', ') || 'None');
-    console.log('Run "ccms --help" to see available commands');
-    process.exit(1);
+    reportUnknownModel(modelName);
   }
 
   const modelConfig = config.models[modelName];
 
-  // Check if model configuration is empty
   if (Object.keys(modelConfig).length === 0) {
     console.error(`Error: Model "${modelName}" configuration is empty`);
     console.log('Run "ccms --help" to see available commands');
@@ -89,67 +136,133 @@ function getModelConfig(modelName) {
   return modelConfig;
 }
 
-// Apply model configuration
-function applyModelConfig(modelConfig) {
-  const settings = loadClaudeSettings();
+function normalizeModelConfig(modelConfig) {
+  const normalized = { ...modelConfig };
 
-  // Ensure env object exists
-  if (!settings.env) {
-    settings.env = {};
-  }
-
-  // First, set default values for unset model fields in the config itself
-  // If ANTHROPIC_MODEL is set but other model fields are not, use ANTHROPIC_MODEL value
-  if (modelConfig.ANTHROPIC_MODEL) {
-    const derivedModelFields = [
-      'ANTHROPIC_SMALL_FAST_MODEL',
-      'ANTHROPIC_DEFAULT_SONNET_MODEL',
-      'ANTHROPIC_DEFAULT_OPUS_MODEL'
-    ];
-
-    for (const field of derivedModelFields) {
-      if (!modelConfig[field]) {
-        modelConfig[field] = modelConfig.ANTHROPIC_MODEL;
+  if (normalized.ANTHROPIC_MODEL) {
+    for (const field of DERIVED_MODEL_FIELDS) {
+      if (!normalized[field]) {
+        normalized[field] = normalized.ANTHROPIC_MODEL;
       }
     }
   }
 
-  // Only update model-related environment variables
-  const modelEnvVars = [
-    'ANTHROPIC_AUTH_TOKEN',
-    'ANTHROPIC_BASE_URL',
-    'ANTHROPIC_MODEL',
-    'ANTHROPIC_SMALL_FAST_MODEL',
-    'ANTHROPIC_DEFAULT_SONNET_MODEL',
-    'ANTHROPIC_DEFAULT_OPUS_MODEL',
-    'CLAUDE_CODE_MAX_OUTPUT_TOKENS',
-    'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC'
-  ];
+  return normalized;
+}
 
-  // Apply configuration
-  for (const key of modelEnvVars) {
-    if (modelConfig[key] !== undefined) {
-      settings.env[key] = modelConfig[key];
+function buildModelEnv(modelConfig) {
+  const normalized = normalizeModelConfig(modelConfig);
+  const env = { ...process.env };
+
+  for (const key of MODEL_ENV_VARS) {
+    if (normalized[key] !== undefined) {
+      env[key] = String(normalized[key]);
     }
   }
 
-  // Handle default value logic
-  // Check required environment variables
-  const requiredEnvVars = [
-    'ANTHROPIC_MODEL',
-    'ANTHROPIC_AUTH_TOKEN',
-    'ANTHROPIC_BASE_URL'
-  ];
+  for (const envVar of REQUIRED_ENV_VARS) {
+    if (!env[envVar]) {
+      console.error(`Error: ${envVar} is required`);
+      process.exit(1);
+    }
+  }
 
-  for (const envVar of requiredEnvVars) {
+  if (!env.CLAUDE_CODE_MAX_OUTPUT_TOKENS) {
+    env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = DEFAULT_MAX_OUTPUT_TOKENS;
+  }
+
+  if (!env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
+    env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = DEFAULT_DISABLE_NONESSENTIAL_TRAFFIC;
+  }
+
+  return env;
+}
+
+function getStartArgsFromArgv() {
+  const args = process.argv.slice(2);
+
+  if (args[0] !== 'start') {
+    return [];
+  }
+
+  let claudeArgs = args.slice(2);
+  if (claudeArgs[0] === '--') {
+    claudeArgs = claudeArgs.slice(1);
+  }
+
+  return claudeArgs;
+}
+
+function hasPermissionOverride(args) {
+  return args.some((arg) =>
+    arg === '--dangerously-skip-permissions' ||
+    arg === '--allow-dangerously-skip-permissions' ||
+    arg.startsWith('--permission-mode')
+  );
+}
+
+function buildStartArgs(userArgs = []) {
+  if (hasPermissionOverride(userArgs)) {
+    return userArgs;
+  }
+
+  return [...YOLO_ARGS, ...userArgs];
+}
+
+function launchClaude(env, claudeArgs = []) {
+  const child = spawn(CLAUDE_BIN, claudeArgs, {
+    env,
+    stdio: 'inherit'
+  });
+
+  child.on('error', (error) => {
+    if (error.code === 'ENOENT') {
+      console.error(`Error: "${CLAUDE_BIN}" command not found. Is Claude Code installed?`);
+    } else {
+      console.error(`Error: Failed to start Claude Code (${error.message})`);
+    }
+    process.exit(1);
+  });
+
+  child.on('close', (code, signal) => {
+    if (signal) {
+      process.kill(process.pid, signal);
+      return;
+    }
+    process.exit(code ?? 0);
+  });
+}
+
+function startClaudeWithModel(modelName) {
+  const modelConfig = getModelConfig(modelName);
+  const env = buildModelEnv(modelConfig);
+  const claudeArgs = buildStartArgs(getStartArgsFromArgv());
+
+  console.log(`[ccms] starting claude code with model: ${env.ANTHROPIC_MODEL} (yolo mode)\n`);
+  launchClaude(env, claudeArgs);
+}
+
+function applyModelConfig(modelConfig) {
+  const settings = loadClaudeSettings();
+  const normalized = normalizeModelConfig(modelConfig);
+
+  if (!settings.env) {
+    settings.env = {};
+  }
+
+  for (const key of MODEL_ENV_VARS) {
+    if (normalized[key] !== undefined) {
+      settings.env[key] = normalized[key];
+    }
+  }
+
+  for (const envVar of REQUIRED_ENV_VARS) {
     if (!settings.env[envVar]) {
       console.error(`Error: ${envVar} is required`);
       process.exit(1);
     }
   }
 
-  
-  // Handle special environment variable defaults
   if (!settings.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS) {
     settings.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = DEFAULT_MAX_OUTPUT_TOKENS;
   }
@@ -159,108 +272,26 @@ function applyModelConfig(modelConfig) {
   }
 
   saveClaudeSettings(settings);
-  console.log(`✅ Switched to model: ${settings.env.ANTHROPIC_MODEL}`);
+  console.log(`Switched to model: ${settings.env.ANTHROPIC_MODEL}`);
 }
 
-// List all models
-function listModels() {
-  const config = loadModelConfig();
-  const models = Object.keys(config.models || {});
-
-  if (models.length === 0) {
-    console.log('No models configured');
-    return;
-  }
-
-  console.log('Available models:');
-  models.forEach(model => {
-    console.log(`  - ${model}`);
-  });
+function configModel(modelName) {
+  const modelConfig = getModelConfig(modelName);
+  applyModelConfig(modelConfig);
 }
 
-// Check if model name is valid
-function isValidModel(modelName) {
-  const config = loadModelConfig();
-  return config.models &&
-         config.models[modelName] &&
-         Object.keys(config.models[modelName]).length > 0;
-}
-
-// Main program
-program
-  .name('ccms')
-  .description('Claude Code Model Switch - Switch Claude Code models')
-  .version('1.0.3')
-  .argument('[model]', 'Model name to switch to')
-  .action((model) => {
-    if (model) {
-      // If model name argument provided, attempt to switch model
-      if (isValidModel(model)) {
-        const modelConfig = getModelConfig(model);
-        applyModelConfig(modelConfig);
-      } else {
-        const config = loadModelConfig();
-        const modelConfig = config.models && config.models[model];
-
-        if (modelConfig && Object.keys(modelConfig).length === 0) {
-          console.error(`Error: Model "${model}" configuration is empty`);
-        } else {
-          console.error(`Error: Model "${model}" not found`);
-        }
-
-        const validModels = Object.keys(config.models || {}).filter(name =>
-          config.models[name] && Object.keys(config.models[name]).length > 0
-        );
-        console.log('Available models:', validModels.join(', ') || 'None');
-        console.log('Run "ccms --help" to see available commands');
-        process.exit(1);
-      }
-    } else {
-      // If no arguments provided, show help information
-      program.help();
-    }
-  });
-
-program
-  .command('switch <model>')
-  .description('Switch to specified model')
-  .action((model) => {
-    const modelConfig = getModelConfig(model);
-    applyModelConfig(modelConfig);
-  });
-
-program
-  .command('list')
-  .description('List all available models')
-  .action(() => {
-    listModels();
-  });
-
-// Unset all model-related configuration
 function unsetModelConfig() {
   const settings = loadClaudeSettings();
 
-  // Ensure env object exists
   if (!settings.env) {
     settings.env = {};
   }
 
-  // Model-related environment variables to remove (excluding some settings)
-  const modelEnvVars = [
-    'ANTHROPIC_AUTH_TOKEN',
-    'ANTHROPIC_BASE_URL',
-    'ANTHROPIC_MODEL',
-    'ANTHROPIC_SMALL_FAST_MODEL',
-    'ANTHROPIC_DEFAULT_SONNET_MODEL',
-    'ANTHROPIC_DEFAULT_OPUS_MODEL'
-  ];
-
   let removedCount = 0;
   const removedVars = [];
 
-  // Remove only existing model-related environment variables
-  for (const key of modelEnvVars) {
-    if (settings.env.hasOwnProperty(key)) {
+  for (const key of UNSET_ENV_VARS) {
+    if (Object.prototype.hasOwnProperty.call(settings.env, key)) {
       delete settings.env[key];
       removedCount++;
       removedVars.push(key);
@@ -277,6 +308,48 @@ function unsetModelConfig() {
   }
 }
 
+function listModels() {
+  const models = getValidModels();
+
+  if (models.length === 0) {
+    console.log('No models configured');
+    return;
+  }
+
+  console.log('Available models:');
+  models.forEach((model) => {
+    console.log(`  - ${model}`);
+  });
+}
+
+program
+  .name('ccms')
+  .description('Claude Code Model Switch - Manage and launch Claude Code with configured models')
+  .version('2.1.0');
+
+program
+  .command('start <model> [claude-args...]')
+  .description('Launch Claude Code with model env vars (yolo mode enabled)')
+  .allowUnknownOption()
+  .allowExcessArguments()
+  .action((model) => {
+    startClaudeWithModel(model);
+  });
+
+program
+  .command('config <model>')
+  .description('Write model configuration to ~/.claude/settings.json')
+  .action((model) => {
+    configModel(model);
+  });
+
+program
+  .command('list')
+  .description('List all available models')
+  .action(() => {
+    listModels();
+  });
+
 program
   .command('config-path')
   .description('Display configuration file paths')
@@ -287,9 +360,13 @@ program
 
 program
   .command('unset')
-  .description('Remove all model-related configuration and use official models')
+  .description('Remove model-related configuration from ~/.claude/settings.json')
   .action(() => {
     unsetModelConfig();
   });
 
 program.parse();
+
+if (!process.argv.slice(2).length) {
+  program.help();
+}
