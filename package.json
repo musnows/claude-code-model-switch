@@ -4,7 +4,7 @@
   "description": "Launch Claude Code with preconfigured model environments",
   "main": "index.js",
   "bin": {
-    "ccms": "./index.js"
+    "ccms": "index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
