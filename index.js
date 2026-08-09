@@ -262,7 +262,7 @@ function startClaudeWithModel(modelName) {
   const env = buildModelEnv(modelConfig);
   const claudeArgs = buildStartArgs(getStartArgsFromArgv());
 
-  console.log(`[ccms] starting claude code with model: ${env.ANTHROPIC_MODEL} (yolo mode)\n`);
+  console.log(`[ccms] model: ${env.ANTHROPIC_MODEL}, endpoint: ${env.ANTHROPIC_BASE_URL} (yolo mode)\n`);
   launchClaude(env, claudeArgs);
 }
 
