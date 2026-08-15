@@ -12,6 +12,9 @@ const YOLO_ARGS = ['--dangerously-skip-permissions'];
 
 const DEFAULT_MAX_OUTPUT_TOKENS = '8192';
 const DEFAULT_DISABLE_NONESSENTIAL_TRAFFIC = '1';
+const DEFAULT_ATTRIBUTION_HEADER = '0';
+const DEFAULT_MAX_CONTEXT_TOKENS = '200000';
+const DEFAULT_AUTOCOMPACT_PCT_OVERRIDE = '80';
 
 const MODEL_ENV_VARS = [
   'ANTHROPIC_AUTH_TOKEN',
@@ -22,6 +25,9 @@ const MODEL_ENV_VARS = [
   'ANTHROPIC_DEFAULT_OPUS_MODEL',
   'ANTHROPIC_DEFAULT_HAIKU_MODEL',
   'CLAUDE_CODE_MAX_OUTPUT_TOKENS',
+  'CLAUDE_CODE_MAX_CONTEXT_TOKENS',
+  'CLAUDE_AUTOCOMPACT_PCT_OVERRIDE',
+  'CLAUDE_CODE_ATTRIBUTION_HEADER',
   'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC',
   'CLAUDE_CODE_AUTO_COMPACT_WINDOW',
   'API_TIMEOUT_MS'
@@ -34,7 +40,14 @@ const UNSET_ENV_VARS = [
   'ANTHROPIC_SMALL_FAST_MODEL',
   'ANTHROPIC_DEFAULT_SONNET_MODEL',
   'ANTHROPIC_DEFAULT_OPUS_MODEL',
-  'ANTHROPIC_DEFAULT_HAIKU_MODEL'
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+  'CLAUDE_CODE_MAX_CONTEXT_TOKENS',
+  'CLAUDE_AUTOCOMPACT_PCT_OVERRIDE'
+];
+
+const CONTEXT_ENV_VARS = [
+  'CLAUDE_CODE_MAX_CONTEXT_TOKENS',
+  'CLAUDE_AUTOCOMPACT_PCT_OVERRIDE'
 ];
 
 const DERIVED_MODEL_FIELDS = [
@@ -160,6 +173,10 @@ function mergeModelConfig(modelName) {
   return { ...shared, ...modelConfig };
 }
 
+function hasConfiguredValue(value) {
+  return value !== undefined && value !== null && value !== '';
+}
+
 function normalizeModelConfig(modelConfig) {
   const normalized = { ...modelConfig };
 
@@ -168,6 +185,19 @@ function normalizeModelConfig(modelConfig) {
       if (!normalized[field]) {
         normalized[field] = normalized.ANTHROPIC_MODEL;
       }
+    }
+  }
+
+  normalized.CLAUDE_CODE_ATTRIBUTION_HEADER = DEFAULT_ATTRIBUTION_HEADER;
+
+  const hasOneMillionContextSuffix = String(normalized.ANTHROPIC_MODEL || '').endsWith('[1m]');
+  const hasConfiguredContextTokens = hasConfiguredValue(normalized.CLAUDE_CODE_MAX_CONTEXT_TOKENS);
+
+  if (!hasOneMillionContextSuffix && !hasConfiguredContextTokens) {
+    normalized.CLAUDE_CODE_MAX_CONTEXT_TOKENS = DEFAULT_MAX_CONTEXT_TOKENS;
+
+    if (!hasConfiguredValue(normalized.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE)) {
+      normalized.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE = DEFAULT_AUTOCOMPACT_PCT_OVERRIDE;
     }
   }
 
@@ -274,6 +304,12 @@ function applyModelConfig(modelConfig) {
     settings.env = {};
   }
 
+  for (const envVar of CONTEXT_ENV_VARS) {
+    if (!Object.prototype.hasOwnProperty.call(normalized, envVar)) {
+      delete settings.env[envVar];
+    }
+  }
+
   for (const [key, value] of Object.entries(normalized)) {
     if (value !== undefined && value !== null) {
       settings.env[key] = String(value);
@@ -352,6 +388,8 @@ function unsetModelConfig() {
     settings.env = {};
   }
 
+  settings.env.CLAUDE_CODE_ATTRIBUTION_HEADER = DEFAULT_ATTRIBUTION_HEADER;
+
   let removedCount = 0;
   const removedVars = [];
 
@@ -390,7 +428,7 @@ function listModels() {
 program
   .name('ccms')
   .description('Claude Code Model Switch - Manage and launch Claude Code with configured models')
-  .version('2.2.0');
+  .version('2.2.2');
 
 program
   .command('start <model> [claude-args...]')

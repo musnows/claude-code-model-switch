@@ -1,6 +1,6 @@
 {
   "name": "claude-code-model-switch",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Launch Claude Code with preconfigured model environments",
   "main": "index.js",
   "bin": {
