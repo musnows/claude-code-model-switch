@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const { program } = require('commander');
+const { normalizeStartCommandArgs } = require('./argv');
 
 const CLAUDE_SETTINGS_PATH = path.join(process.env.HOME, '.claude', 'settings.json');
 const MODEL_CONFIG_PATH = path.join(process.env.HOME, '.claude-code-model-switch', 'settings.json');
@@ -502,6 +503,14 @@ program
     console.log('Usage: ccms shared [list|set <key> <value>|unset <key>]');
     process.exit(1);
   });
+
+// Multica may place Claude protocol args before the ccms subcommand. Normalize
+// only when a concrete start/model pair exists; otherwise leave argv untouched
+// so Commander keeps its normal unsupported-argument error.
+process.argv = [
+  ...process.argv.slice(0, 2),
+  ...normalizeStartCommandArgs(process.argv.slice(2)),
+];
 
 program.parse();
 
