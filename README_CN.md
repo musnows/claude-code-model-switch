@@ -95,6 +95,7 @@ ccms shared unset API_TIMEOUT_MS
 | `ANTHROPIC_DEFAULT_SONNET_MODEL` | ❌ | 同 `ANTHROPIC_MODEL` | 默认 Sonnet 模型 |
 | `ANTHROPIC_DEFAULT_OPUS_MODEL` | ❌ | 同 `ANTHROPIC_MODEL` | 默认 Opus 模型 |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | ❌ | `8192` | 最大输出令牌数 |
+| `CLAUDE_CODE_ATTRIBUTION_HEADER` | ❌ | `0` | 归属标识头设置 |
 | `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | ❌ | 不设置 | 禁用非必要流量 |
 
 ### 特殊规则
@@ -104,6 +105,7 @@ ccms shared unset API_TIMEOUT_MS
 3. **shared 公共变量**：`shared` 中的环境变量会应用到所有模型；单个模型里同名变量会覆盖 shared
 4. **默认值处理**：
    - `CLAUDE_CODE_MAX_OUTPUT_TOKENS` 默认为 `8192`
+   - `CLAUDE_CODE_ATTRIBUTION_HEADER` 默认为 `0`
    - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 仅在显式配置时设置
    - 未设置的模型字段会自动使用 `ANTHROPIC_MODEL` 的值
 4. **配置文件**：首次运行时会自动创建空的配置文件 `{"shared": {}, "models": {}}`
