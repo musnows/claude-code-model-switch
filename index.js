@@ -12,7 +12,6 @@ const CLAUDE_BIN = process.env.CLAUDE_BIN || 'claude';
 const YOLO_ARGS = ['--dangerously-skip-permissions'];
 
 const DEFAULT_MAX_OUTPUT_TOKENS = '8192';
-const DEFAULT_DISABLE_NONESSENTIAL_TRAFFIC = '1';
 const DEFAULT_ATTRIBUTION_HEADER = '0';
 const DEFAULT_MAX_CONTEXT_TOKENS = '200000';
 const DEFAULT_AUTOCOMPACT_PCT_OVERRIDE = '80';
@@ -226,10 +225,6 @@ function buildModelEnv(modelConfig) {
     env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = DEFAULT_MAX_OUTPUT_TOKENS;
   }
 
-  if (!env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
-    env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = DEFAULT_DISABLE_NONESSENTIAL_TRAFFIC;
-  }
-
   return env;
 }
 
@@ -326,10 +321,6 @@ function applyModelConfig(modelConfig) {
 
   if (!settings.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS) {
     settings.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS = DEFAULT_MAX_OUTPUT_TOKENS;
-  }
-
-  if (!settings.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
-    settings.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = DEFAULT_DISABLE_NONESSENTIAL_TRAFFIC;
   }
 
   saveClaudeSettings(settings);
@@ -429,7 +420,7 @@ function listModels() {
 program
   .name('ccms')
   .description('Claude Code Model Switch - Manage and launch Claude Code with configured models')
-  .version('2.2.2');
+  .version(require('./package.json').version);
 
 program
   .command('start <model> [claude-args...]')

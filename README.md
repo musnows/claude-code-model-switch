@@ -95,7 +95,7 @@ Edit the configuration file `~/.claude-code-model-switch/settings.json`:
 | `ANTHROPIC_DEFAULT_SONNET_MODEL` | ❌ | Same as `ANTHROPIC_MODEL` | Default Sonnet model |
 | `ANTHROPIC_DEFAULT_OPUS_MODEL` | ❌ | Same as `ANTHROPIC_MODEL` | Default Opus model |
 | `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | ❌ | `8192` | Maximum output tokens |
-| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | ❌ | `1` | Disable non-essential traffic |
+| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | ❌ | Not set | Disable non-essential traffic |
 
 ### Special Rules
 
@@ -104,7 +104,7 @@ Edit the configuration file `~/.claude-code-model-switch/settings.json`:
 3. **shared env vars**: variables in `shared` apply to every model; model-specific values override shared ones
 4. **Default Values**:
    - `CLAUDE_CODE_MAX_OUTPUT_TOKENS` defaults to `8192`
-   - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` defaults to `1`
+   - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` is only set when explicitly configured
    - Unset model fields automatically use the value of `ANTHROPIC_MODEL`
 4. **Configuration File**: Empty configuration file `{"shared": {}, "models": {}}` is automatically created on first run
 5. **Unset Command**: `ccms unset` removes only model-specific variables from `settings.json` and restores official models
